@@ -39,7 +39,7 @@ pub fn check_database(full_url: &String, shortened_url: &String) -> Result<bool>
     Ok(false) // match found, URL already exists
 }
 
-pub fn add_url_to_db(full_url: String, shortened_url: String) {
+pub fn add_url_to_db(full_url: &String, shortened_url: String) {
     let now = Local::now();
     let today_date: String = now.date_naive().format("%y/%m/%d").to_string();
     let conn = Connection::open("urls_all.db").unwrap();
@@ -55,7 +55,7 @@ pub fn show_all_urls() -> Result<()> {
     let mut stmt = conn.prepare("SELECT * FROM urls_all")?;
     let mut url_db_matches = stmt.query([])?;
     while let Some(row) = url_db_matches.next()? {
-        // Access columns by index (0-based)
+        // Access columns by index
         let full_url: String = row.get(0)?;
         let shortened_url: String = row.get(1)?;
         let date: String = row.get(2)?;
@@ -70,13 +70,3 @@ pub fn delete_entry(full_url: &String) -> Result<()> {
         .unwrap();
     Ok(())
 }
-//create database
-// conn.execute(
-//     "CREATE TABLE IF NOT EXISTS URLS_ALL (
-//             full_url TEXT NOT NULL,
-//             shortened_url TEXT NOT NULL,
-//             date TEXT NOT NULL
-//         )",
-//     (),
-// )
-// .unwrap();
