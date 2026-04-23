@@ -1,4 +1,5 @@
 use dt_url::*;
+use std::process::Command;
 
 fn main() {
     let test_url = "https://elpais.com/us/".to_string();
@@ -38,8 +39,6 @@ fn main() {
 | `GET`    | `/:code`   | Look up the code, redirect to the original URL |
 | `DELETE` | `/:code`   | Optional — remove a mapping                    |
 */
-
-use std::process::Command;
 
 pub fn open_url_in_browser(url_string: &str) -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(target_os = "macos")]
