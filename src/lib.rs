@@ -5,9 +5,9 @@ pub use rusqlite::{Connection, Result};
 
 #[derive(Debug)]
 pub struct Link {
-    full_url: String,
-    shortened_url: String,
-    date: String,
+    pub full_url: String,
+    pub shortened_url: String,
+    pub date: String,
 }
 
 pub fn generate_url() -> String {

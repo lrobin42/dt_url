@@ -5,11 +5,14 @@ fn main() {
     let short_url = generate_url();
     let url_ending_available = check_database(&test_url, &short_url).unwrap();
     if url_ending_available {
-        add_url_to_db(&test_url, short_url);
+        add_url_to_db(&test_url, short_url.clone());
     }
-    show_all_urls().unwrap();
+    let test_short = "dt.url/Goq8R0o8".to_string();
+    open_short_url(&test_short)
 
-    open_url_in_browser(&test_url);
+    //show_all_urls().unwrap();
+
+    //open_url_in_browser(&test_url);
 }
 
 // let news = Link {
@@ -59,17 +62,27 @@ pub fn open_url_in_browser(url_string: &str) -> Result<(), Box<dyn std::error::E
 
 //fix the query
 pub fn open_short_url(short_url: &String) {
-    let conn = Connection::open("urls_all.db")?;
+    let conn = Connection::open("urls_all.db").unwrap();
     let query = format!(
-        "SELECT full_url, shortened_url, date FROM urls_all WHERE full_url='{}' OR shortened_url='{}'",
-        &full_url, &shortened_url
+        "SELECT full_url, shortened_url, date FROM urls_all WHERE shortened_url='{}'",
+        &short_url
     );
-    let mut stmt = conn.prepare(&query)?;
-    let url_db_matches = stmt.query_map([], |row| {
-        Ok(Link {
-            full_url: row.get(0)?,
-            shortened_url: row.get(1)?,
-            date: row.get(2)?,
+    let mut stmt = conn.prepare(&query).unwrap();
+    let mut url_db_matches = stmt
+        .query_map([], |row| {
+            Ok(Link {
+                full_url: row.get(0)?,
+                shortened_url: row.get(1)?,
+                date: row.get(2)?,
+            })
         })
-    })?;
+        .unwrap();
+
+    let stored_url = url_db_matches
+        .next() // get the first row
+        .expect("No URL found") // handle the Option (None if no rows)
+        .expect("Row mapping failed") // handle the Result from query_map
+        .full_url;
+
+    open_url_in_browser(&stored_url);
 }
