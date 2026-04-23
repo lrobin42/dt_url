@@ -16,30 +16,6 @@ fn main() {
     //open_url_in_browser(&test_url);
 }
 
-// let news = Link {
-//     full_url: "www.vox.com".to_string(),
-//     shortened_url: "dt.url/qxnpxmmj".to_string(),
-//     date: "26/04/11".to_string(),
-// };
-
-//Receive the long url in the request body
-
-/*
-1. Receive the long URL in the request body
-2. Validate it's an actual URL (not empty, has a scheme like `https://`)
-3. Generate a random short code — look into the `nanoid` or `rand` crate
-4. Check Redis: if the code already exists, generate a new one (collision handling)
-5. Store `code → url` in Redis, optionally with a TTL (expiry time)
-6. Return the full short URL to the caller (e.g. `https://yourdomain.com/x7kQpZ`)
-*/
-
-/*
-| `POST`   | `/shorten` | Accept a long URL, return a short one          |
-| -------- | ---------- | ---------------------------------------------- |
-| `GET`    | `/:code`   | Look up the code, redirect to the original URL |
-| `DELETE` | `/:code`   | Optional — remove a mapping                    |
-*/
-
 pub fn open_url_in_browser(url_string: &str) -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(target_os = "macos")]
     Command::new("open").arg(url_string).spawn()?;
@@ -78,9 +54,9 @@ pub fn open_short_url(short_url: &String) {
         .unwrap();
 
     let stored_url = url_db_matches
-        .next() // get the first row
-        .expect("No URL found") // handle the Option (None if no rows)
-        .expect("Row mapping failed") // handle the Result from query_map
+        .next()
+        .expect("No URL found")
+        .expect("Row mapping failed")
         .full_url;
 
     open_url_in_browser(&stored_url);
