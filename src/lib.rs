@@ -1,6 +1,8 @@
 pub use chrono::Local;
-pub use rand::distr::{Alphanumeric, SampleString};
-pub use rand::rng;
+use rand::Rng;
+use rand::distributions::Alphanumeric;
+use rand::distributions::DistString;
+use rand::thread_rng;
 pub use rusqlite::{Connection, Result};
 
 #[derive(Debug)]
@@ -12,12 +14,16 @@ pub struct Link {
 
 pub fn generate_url() -> String {
     let mut shortened_url = "dt.url/".to_string();
-    let mut rng = rng();
+
+    let mut rng = thread_rng();
+
     let url_ending = Alphanumeric.sample_string(&mut rng, 8);
-    // concatenate to dt.url/ string
+
     shortened_url.push_str(&url_ending);
-    return shortened_url;
+
+    shortened_url
 }
+
 pub fn check_database(full_url: &String, shortened_url: &String) -> Result<bool> {
     let conn = Connection::open("urls_all.db")?;
     let query = format!(
