@@ -6,7 +6,8 @@ use iced::{
 use rand::thread_rng;
 use rand::{Rng, distributions::Alphanumeric};
 use regex::Regex;
-
+use rusqlite::Connection;
+use std::process::Command;
 use std::sync::OnceLock;
 
 #[derive(Debug)]
@@ -49,7 +50,7 @@ fn update(state: &mut UrlShortener, message: Message) -> Task<Message> {
     match message {
         Message::UrlInputChanged(value) => {
             state.input_url = value;
-            state.error_message = None; // clear error on new input
+            state.error_message = None;
         }
         Message::GenerateShortUrl => {
             state.error_message = None;
@@ -111,13 +112,6 @@ fn view(state: &UrlShortener) -> Element<Message> {
         .into()
 }
 
-/* ---------------------------------------------------
-   Existing Logic
-----------------------------------------------------*/
-
-use rusqlite::Connection;
-use std::process::Command;
-
 #[derive(Debug)]
 struct Link {
     full_url: String,
@@ -140,10 +134,7 @@ fn check_url_validity(url: &str) -> Result<bool, UrlValidationError> {
     Ok(regex.is_match(url))
 }
 
-// Example URL generator
 fn generate_url() -> String {
-    //check the validity of the url with regex before generation
-
     rand::thread_rng()
         .sample_iter(&Alphanumeric)
         .take(8)
@@ -151,16 +142,13 @@ fn generate_url() -> String {
         .collect()
 }
 
-// Example DB check
 fn check_database(
     _full_url: &String,
     _short_url: &String,
 ) -> Result<bool, Box<dyn std::error::Error>> {
-    // Replace with real DB lookup
     Ok(true)
 }
 
-// Example DB insert
 fn add_url_to_db(full_url: &String, short_url: String) {
     let conn = Connection::open("urls_all.db").unwrap();
 
@@ -232,64 +220,3 @@ pub fn open_short_url(short_url: &String) {
 
     open_url_in_browser(&stored_url).unwrap();
 }
-/*
-fn main() {
-    let test_url = "https://elpais.com/us/".to_string();
-    let short_url = generate_url();
-    let url_ending_available = check_database(&test_url, &short_url).unwrap();
-    if url_ending_available {
-        add_url_to_db(&test_url, short_url.clone());
-    }
-    let test_short = "dt.url/Goq8R0o8".to_string();
-    open_short_url(&test_short)
-
-    //show_all_urls().unwrap();
-
-    //open_url_in_browser(&test_url);
-}
-
-pub fn open_url_in_browser(url_string: &str) -> Result<(), Box<dyn std::error::Error>> {
-    #[cfg(target_os = "macos")]
-    Command::new("open").arg(url_string).spawn()?;
-
-    #[cfg(target_os = "windows")]
-    Command::new("cmd")
-        .args(["/C", "start", url_string])
-        .spawn()?;
-
-    #[cfg(target_os = "linux")]
-    Command::new("xdg-open")
-        .arg(url_string)
-        .stderr(std::process::Stdio::null())
-        .spawn()
-        .expect("URL needed");
-
-    Ok(())
-}
-
-pub fn open_short_url(short_url: &String) {
-    let conn = Connection::open("urls_all.db").unwrap();
-    let query = format!(
-        "SELECT full_url, shortened_url, date FROM urls_all WHERE shortened_url='{}'",
-        &short_url
-    );
-    let mut stmt = conn.prepare(&query).unwrap();
-    let mut url_db_matches = stmt
-        .query_map([], |row| {
-            Ok(Link {
-                full_url: row.get(0)?,
-                shortened_url: row.get(1)?,
-                date: row.get(2)?,
-            })
-        })
-        .unwrap();
-
-    let stored_url = url_db_matches
-        .next()
-        .expect("No URL found")
-        .expect("Row mapping failed")
-        .full_url;
-
-    open_url_in_browser(&stored_url);
-}
-*/
