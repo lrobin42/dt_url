@@ -3,9 +3,9 @@ use iced::{
     Element, Length, Settings, Task, Theme,
     widget::{button, column, container, text, text_input},
 };
-use rand::Rng;
-use rand::distributions::Alphanumeric;
 use rand::thread_rng;
+use rand::{Rng, distributions::Alphanumeric};
+use regex::Regex;
 
 fn main() -> iced::Result {
     iced::application("URL Shortener", update, view)
@@ -33,15 +33,25 @@ fn update(state: &mut UrlShortener, message: Message) -> Task<Message> {
 
         Message::GenerateShortUrl => {
             if !state.input_url.is_empty() {
-                let generated = generate_url();
+                let url_status = check_url_validity(&state.input_url);
 
-                let available = check_database(&state.input_url, &generated).unwrap_or(false);
+                if url_status {
+                    //     let short_url = generate_url_ending();
+                    //     println!("{:?}", short_url)
+                    // } else {
+                    //     println!("Invalid url: try again.")
+                    // }
+                    //}
+                    let generated = generate_url();
 
-                if available {
-                    add_url_to_db(&state.input_url, generated.clone());
-                    state.short_url = format!("dt.url/{}", generated);
-                } else {
-                    state.short_url = "Failed to generate unique short URL".to_string();
+                    let available = check_database(&state.input_url, &generated).unwrap_or(false);
+
+                    if available {
+                        add_url_to_db(&state.input_url, generated.clone());
+                        state.short_url = format!("dt.url/{}", generated);
+                    } else {
+                        state.short_url = "Failed to generate unique short URL".to_string();
+                    }
                 }
             }
         }
@@ -87,9 +97,17 @@ struct Link {
     date: String,
 }
 
+fn check_url_validity(url: &str) -> bool {
+    let re = Regex::new(
+        r"^(https?://|www\.)[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z]{2,})+(/[^\s]*)?$"
+    ).unwrap();
+
+    re.is_match(url)
+}
+
 // Example URL generator
 fn generate_url() -> String {
-    use rand::{Rng, distributions::Alphanumeric};
+    //check the validity of the url with regex before generation
 
     rand::thread_rng()
         .sample_iter(&Alphanumeric)
