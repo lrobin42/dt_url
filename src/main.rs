@@ -7,6 +7,25 @@ use rand::thread_rng;
 use rand::{Rng, distributions::Alphanumeric};
 use regex::Regex;
 
+use std::sync::OnceLock;
+
+#[derive(Debug)]
+pub enum UrlValidationError {
+    RegexInitFailed(String),
+}
+
+impl std::fmt::Display for UrlValidationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            UrlValidationError::RegexInitFailed(msg) => {
+                write!(f, "Failed to initialize URL regex: {}", msg)
+            }
+        }
+    }
+}
+
+impl std::error::Error for UrlValidationError {}
+
 fn main() -> iced::Result {
     iced::application("URL Shortener", update, view)
         .theme(|_| Theme::Dark)
@@ -17,6 +36,7 @@ fn main() -> iced::Result {
 struct UrlShortener {
     input_url: String,
     short_url: String,
+    error_message: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -29,34 +49,37 @@ fn update(state: &mut UrlShortener, message: Message) -> Task<Message> {
     match message {
         Message::UrlInputChanged(value) => {
             state.input_url = value;
+            state.error_message = None; // clear error on new input
         }
-
         Message::GenerateShortUrl => {
-            if !state.input_url.is_empty() {
-                let url_status = check_url_validity(&state.input_url);
+            state.error_message = None;
 
-                if url_status {
-                    //     let short_url = generate_url_ending();
-                    //     println!("{:?}", short_url)
-                    // } else {
-                    //     println!("Invalid url: try again.")
-                    // }
-                    //}
+            if state.input_url.is_empty() {
+                state.error_message = Some("URL invalid, try again.".to_string());
+                return Task::none();
+            }
+
+            match check_url_validity(&state.input_url) {
+                Ok(true) => {
                     let generated = generate_url();
-
                     let available = check_database(&state.input_url, &generated).unwrap_or(false);
-
                     if available {
                         add_url_to_db(&state.input_url, generated.clone());
                         state.short_url = format!("dt.url/{}", generated);
                     } else {
-                        state.short_url = "Failed to generate unique short URL".to_string();
+                        state.error_message =
+                            Some("Failed to generate unique short URL.".to_string());
                     }
+                }
+                Ok(false) => {
+                    state.error_message = Some("URL invalid, try again.".to_string());
+                }
+                Err(e) => {
+                    state.error_message = Some(format!("Validation error: {}", e));
                 }
             }
         }
     }
-
     Task::none()
 }
 
@@ -70,9 +93,14 @@ fn view(state: &UrlShortener) -> Element<Message> {
         .padding(10)
         .on_press(Message::GenerateShortUrl);
 
+    let error_display = match &state.error_message {
+        Some(msg) => text(msg).color(iced::Color::from_rgb(0.85, 0.1, 0.1)),
+        None => text(""),
+    };
+
     let output = text(&state.short_url).size(24);
 
-    let content = column![input, generate_button, output]
+    let content = column![input, generate_button, error_display, output]
         .spacing(20)
         .padding(20)
         .width(Length::Fill);
@@ -97,12 +125,19 @@ struct Link {
     date: String,
 }
 
-fn check_url_validity(url: &str) -> bool {
-    let re = Regex::new(
-        r"^(https?://|www\.)[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z]{2,})+(/[^\s]*)?$"
-    ).unwrap();
+fn check_url_validity(url: &str) -> Result<bool, UrlValidationError> {
+    static URL_REGEX: OnceLock<Result<Regex, regex::Error>> = OnceLock::new();
 
-    re.is_match(url)
+    let regex = URL_REGEX
+        .get_or_init(|| {
+            Regex::new(
+                r"^(https?://|www\.)[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z]{2,})+(/[^\s]*)?$"
+            )
+        })
+        .as_ref()
+        .map_err(|e| UrlValidationError::RegexInitFailed(e.to_string()))?;
+
+    Ok(regex.is_match(url))
 }
 
 // Example URL generator
